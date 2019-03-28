@@ -219,4 +219,82 @@ double dascool::sigmasqr(double R) {
  * @param Omegac The density parameter of cold dark matter
  * @param Tau The reionization optical depth
  * @param TCMB The cosmic microwave background temperature
+ * @param n The primordial power spectrum slope
+ * @param sigma_8 The average fluctuations on scales of 8 Mpc
  * 
+ * @date 28 March 2019
+ */
+dascool::dascool(double H_0, double OmegaM, double OmegaL, double Omegab, double Omegac, double Tau,
+                 double TCMB, double ns, double sigma8) {
+    dascool::Om_M = OmegaM;
+    dascool::Om_L = OmegaL;
+    dascool::Om_b = Omegab;
+    dascool::Om_c = Omegac;
+    dascool::tau = Tau;
+    dascool::T_cmb = TCMB;
+    dascool::n = ns;
+    dascool::sigma_8 = sigma8;
+    
+    dascool::h = H_0/100.0;
+    dascool::Theta = TCMB/2.7;
+}
+
+/**
+ * Returns the value of Omega_M
+ * @author David W. Pearson
+ * 
+ * @date 28 March 2019
+ */
+double getOmega_M() {
+    return dascool::Om_M;
+}
+
+/**
+ * Returns the value of Omega_L
+ * @author David W. Pearson
+ * 
+ * @date 28 March 2019
+ */
+double getOmega_L() {
+    return dascool::Om_L;
+}
+
+/**
+ * Returns the value of Omega_b*h^2
+ * @author David W. Pearson
+ * 
+ * @date 28 March 2019
+ */
+double getOmega_bh2() {
+    return dascool::Om_b*dascool::h*dascool::h;
+}
+
+/**
+ * Returns the value of Omega_c*h^2
+ * @author David W. Pearson
+ * 
+ * @date 28 March 2019
+ */
+double getOmega_ch2() {
+    return dascool::Om_c*dascool::h*dascool::h;
+}
+
+/**
+ * Returns the value of h
+ * @author David W. Pearson
+ * 
+ * @date 28 March 2019
+ */
+double geth() {
+    return dascool::h;
+}
+
+/**
+ * Returns the value of H_0
+ * @author David W. Pearson
+ * 
+ * @date 28 March 2019
+ */
+double geth() {
+    return dascool::h*100.0;
+}

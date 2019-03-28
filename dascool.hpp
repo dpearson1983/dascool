@@ -63,16 +63,17 @@ class dascool{
     
     void setFrequencies(spacing space, double k_min, double k_max, int num_k);
     
-    double calcNoWiggleTransfer(double k);
+    double calcNoWiggleTransfer(double k_i);
     
-    double calcPkPrim(double k);
+    double calcPkPrim(double k_i);
     
     double sigmasqr(double R);
     
     public:
         // Default values from Table 1 of Planck 2018 Results. VI. cosmological parameters
         dascool(double H_O = 67.37, double OmegaM = 0.3147, double OmegaL = 0.6853, double Omegab = 0.049199,
-                  double Omegac = 0.26395, double Tau = 0.0540, double TCMB = 2.7255, double n = 0.9652);
+                  double Omegac = 0.26395, double Tau = 0.0540, double TCMB = 2.7255, double ns = 0.9652,
+                  double sigma8 = 0.8101);
         
         ~dascool();
         
