@@ -67,6 +67,8 @@ class dascool{
     
     double calcNoWiggleTransfer(double k_i);
     
+    double calcWiggleTransfer(double k_i);
+    
     double calcPkPrim(double k_i);
     
     double sigmasqr(double R);
@@ -117,6 +119,7 @@ class dascool{
         
         std::vector<std::vector<double>> noWigglePower(spacing space, double k_min, double k_max, int num_k, double z);
         
+        std::vector<std::vector<double>> wigglePower(spacing space, double k_min, double k_max, int num_k, double z);
 };
     
 #endif

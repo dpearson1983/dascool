@@ -187,6 +187,62 @@ double dascool::calcNoWiggleTransfer(double k_i) {
     return L/(L + C*q*q);
 }
 
+
+double sinc(double x) {
+    if (x != 0) {
+        return sin(x)/x;
+    } else {
+        return 1.0;
+    }
+}
+/**
+ * This function will initialize the wiggle (i.e. BAO features) Transfer function from Eisenstein & Hu 
+ * 1998
+ * @author David W. Pearson
+ * 
+ * @date 29 March 2019
+ */
+double dascool::calcWiggleTransfer(double k_i) {
+    double w_m = dascool::Om_M*dascool::h*dascool::h;
+    double w_b = dascool::Om_b*dascool::h*dascool::h;
+    double fb = dascool::Om_b/dascool::Om_M;
+    double fc = (dascool::Om_M - dascool::Om_b)/dascool::Om_M;
+    double z_eq = 2.5E4*w_m/(dascool::Theta*dascool::Theta*dascool::Theta*dascool::Theta);
+    double k_eq = 7.46E-2*w_m/(dascool::Theta*dascool::Theta);
+    double R_d = (31.5*w_b/(dascool::Theta*dascool::Theta*dascool::Theta*dascool::Theta))*(1000.0/z_d);
+    double R_eq = (31.5*w_b/(dascool::Theta*dascool::Theta*dascool::Theta*dascool::Theta))*(1000.0/z_eq);
+    double sh_d = (2.0/(3.0*k_eq))*sqrt(6.0/R_eq)*log((sqrt(1.0 + R_d) + sqrt(R_d + R_eq))/(1.0 + sqrt(R_eq)));
+    double alpha_gamma = 1.0 - 0.328*log(431.0*w_m)*fb + 0.38*log(22.3*w_m)*fb*fb;
+    double k_silk = 1.6*std::pow(w_b, 0.52)*std::pow(w_m, 0.73)*(1.0 + std::pow(10.4*w_m, -0.95));
+    double quadTerm = (0.43*k_i*sh_d)*(0.43*k_i*sh_d)*(0.43*k_i*sh_d)*(0.43*k_i*sh_d);
+    double gamma_eff = dascool::Om_M*dascool::h*(alpha_gamma + (1.0 - alpha_gamma)/(1.0 + quadTerm));
+    double a1 = std::pow(46.9*w_m, 0.670)*(1.0 + std::pow(32.1*w_m, -0.532));
+    double a2 = std::pow(12.0*w_m, 0.424)*(1.0 + std::pow(45.0*w_m, -0.582));
+    double alpha_c = std::pow(a1, -fb)*std::pow(a2, -fb*fb*fb);
+    double b1 = 0.944/(1.0 + std::pow(458.0*w_m, -0.708));
+    double b2 = std::pow(0.395*w_m, -0.0266);
+    double beta_c = 1.0/(1.0 + b1*(std::pow(fc, b2) - 1.0));
+    double q = k_i/(13.41*k_eq);
+    double L1 = log(exp(1) + 1.8*beta_c*q);
+    double L2 = log(exp(1) + 1.8*1.0*q);
+    double C2 = 14.2/alpha_c + 386/(1.0 + 69.9*std::pow(q, 1.08));
+    double C1 = 14.2/1.0 + 386/(1.0 + 69.9*std::pow(q, 1.08));
+    double T_tilde1 = L1/(L1 + C1*q*q);
+    double T_tilde2 = L1/(L1 + C2*q*q);
+    double f = 1.0/(1.0 + std::pow(k_i*sh_d/5.4, 4));
+    double T_c = f*T_tilde1 + (1.0 - f)*T_tilde2;
+    double y = (1.0 + z_eq)/(1.0 + z_d);
+    double x = sqrt(1.0 + y);
+    double G_EH = y*(-6.0*x + (2.0 + 3.0*y)*log((x + 1.0)/(x - 1.0)));
+    double alpha_b = 2.07*k_eq*sh_d*std::pow(1.0 + R_d, -0.75)*G_EH;
+    double beta_node = 8.41*std::pow(w_m, 0.435);
+    double tilde_s = sh_d/std::pow(1.0 + (beta_node/(k_i*sh_d))*(beta_node/(k_i*sh_d))*(beta_node/(k_i*sh_d)), 1.0/3.0);
+    double beta_b = 0.5 + fb + (3.0 - 2.0*fb)*sqrt((17.2*w_m)*(17.2*w_m) + 1.0);
+    double T_tilde3 = L2/(L2 + C1*q*q);
+    double T_b = (T_tilde3/(1.0 + (k_i*sh_d/5.2)*(k_i*sh_d/5.2)) + (alpha_b/(1.0 + std::pow(beta_b/(k_i*sh_d), 3)))*exp(std::pow(-k_i/k_silk, 1.4)))*sinc(k_i*tilde_s/pi);
+    return fb*T_b + fc*T_c;
+}
+
 /**
  * This function will calculate the primordial power spectrum
  * @author David W. Pearson
@@ -490,4 +546,32 @@ std::vector<std::vector<double>> dascool::noWigglePower(spacing space, double k_
     }
     
     return Pk_NW;
+}
+
+/**
+ * Compute linear wiggle power spectrum for the defined cosmology with the Eisenstein & Hu 1998 transfer
+ * function
+ * @author David W. Pearson
+ * 
+ * @param space The kind of spacing to use for frequencies, k (logarithmic is recommended)
+ * @param k_min The minimum frequency
+ * @param k_max The maximum frequency
+ * @param num_k The total number of frequencies to compute the power spectrum at
+ * @param z The redshift to compute the power spectrum at
+ * 
+ * @date 29 March 2019
+ */
+std::vector<std::vector<double>> dascool::wigglePower(spacing space, double k_min, double k_max, int num_k, double z) {
+    dascool::setFrequencies(space, k_min, k_max, num_k);
+    
+    std::vector<std::vector<double>> Pk(2, std::vector<double>(dascool::k.size()));
+    double pk_norm = dascool::sigma_8/dascool::sigmasqr(8.0);
+    for (int i = 0; i < dascool::k.size(); ++i) {
+        double T = calcWiggleTransfer(dascool::k[i]);
+        double GofZ = dascool::Growth(z);
+        Pk[0][i] = dascool::k[i];
+        Pk[1][i] = dascool::calcPkPrim(dascool::k[i])*T*T*GofZ*GofZ*pk_norm;
+    }
+    
+    return Pk;
 }
