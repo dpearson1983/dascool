@@ -81,6 +81,21 @@ double dascool::E_inv(double z, void *params) {
 }
 
 /**
+ * This function is to be used by GSL to perform the integral needed to compute D_1. This
+ * function should not be directly called, it should instead be used to setup a GSL function.
+ * @author David W. Pearson
+ * 
+ * @param z The redshift at which to evaluate the function
+ * @param params Pointer to the a struct of intParams
+ * 
+ * @date 29 March 2019
+ */
+double dascool::D_1int(double z, void *params) {
+    intParams p = *(intParams *)params;
+    return (1.0 + z)/sqrt((1.0 + z)*(1.0 + z)*(1.0 + z)*p.OmM + p.OmL);
+}
+
+/**
  * This function is to be used by GSL to integrate in order to calculate the drag radius. This function
  * should not be directly called, it should instead be used to setup a GSL function.
  * @author David W. Pearson
@@ -200,13 +215,51 @@ double dascool::sigmasqr(double R) {
         double x = k_i*R;
         double w = 3.0*(std::sin(x) - x*std::cos(x))/(x*x*x);
         double T = dascool::calcNoWiggleTransfer(k_i);
-        double pk = T*T*dascool::pk_prim[i];
+        double pk = T*T*dascool::calcPkPrim(k_i);
         double res = k_i*k_i*k_i*w*w*pk;
-        result += w_i[i]*res
+        result += w_i[i]*res;
     }
     result *= (k_max - k_min)/2.0;
     return result;
 }
+
+/**
+ * Calculate the linear growth factor at a given redshift
+ * @author David W. Pearson
+ * 
+ * @param z Redshift at which to calculate
+ * 
+ * @date 29 March 2019
+ */
+double dascool::D_1(double z) {
+    double intRes, error;
+    intParams p;
+    p.OmM = dascool::Om_M;
+    p.OmL = dascool::Om_L;
+    p.Omb = dascool::Om_b;
+    p.Tcmb = dascool::T_cmb;
+    p.H_0 = 100.0;
+    gsl_integration_workspace *w = gsl_integration_workspace_alloc(10000000);
+    gsl_function F;
+    F.function = &D_1int;
+    F.params = &p;
+    gsl_integration_qags(&F, z, 1E6, 1E-6, 1E-6, 10000000, w, &intRes, &error);
+    gsl_integration_workspace_free(w);
+    return dascool::E(z)*intRes;
+}
+
+/**
+ * Calculate the normalized linear growth factor at a given redshift
+ * @author David W. Pearson
+ * 
+ * @param z Redshift at which to calculate
+ * 
+ * @date 29 March 2019
+ */
+double dascool::Growth(double z) {
+    return dascool::D_1(z)/dascool::D_1(0);
+}
+     
 
 /**
  * This is the class initializer. Defaults to Planck 2018 LCDM cosmology.
@@ -237,6 +290,24 @@ dascool::dascool(double H_0, double OmegaM, double OmegaL, double Omegab, double
     
     dascool::h = H_0/100.0;
     dascool::Theta = TCMB/2.7;
+    
+    dascool::acc = gsl_interp_accel_alloc();
+    dascool::r2z = gsl_spline_alloc(gsl_interp_cspline, 1001);
+    std::vector<double> z;
+    std::vector<double> r;
+    double dz = 10.0/1000.0;
+    gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000000);
+    for (int i = 0; i <= 1000; ++i) {
+        z.push_back(i*dz);
+        r.push_back(dascool::comovingDistance(i*dz, w));
+    }
+    gsl_spline_init(dascool::r2z, r.data(), z.data(), z.size());
+    gsl_integration_workspace_free(w);
+}
+
+dascool::~dascool() {
+    gsl_spline_free(dascool::r2z);
+    gsl_interp_accel_free(dascool::acc);
 }
 
 /**
@@ -245,7 +316,7 @@ dascool::dascool(double H_0, double OmegaM, double OmegaL, double Omegab, double
  * 
  * @date 28 March 2019
  */
-double getOmega_M() {
+double dascool::getOmega_M() {
     return dascool::Om_M;
 }
 
@@ -255,7 +326,7 @@ double getOmega_M() {
  * 
  * @date 28 March 2019
  */
-double getOmega_L() {
+double dascool::getOmega_L() {
     return dascool::Om_L;
 }
 
@@ -265,7 +336,7 @@ double getOmega_L() {
  * 
  * @date 28 March 2019
  */
-double getOmega_bh2() {
+double dascool::getOmega_bh2() {
     return dascool::Om_b*dascool::h*dascool::h;
 }
 
@@ -275,7 +346,7 @@ double getOmega_bh2() {
  * 
  * @date 28 March 2019
  */
-double getOmega_ch2() {
+double dascool::getOmega_ch2() {
     return dascool::Om_c*dascool::h*dascool::h;
 }
 
@@ -285,7 +356,7 @@ double getOmega_ch2() {
  * 
  * @date 28 March 2019
  */
-double geth() {
+double dascool::geth() {
     return dascool::h;
 }
 
@@ -295,6 +366,128 @@ double geth() {
  * 
  * @date 28 March 2019
  */
-double geth() {
+double dascool::getH_0() {
     return dascool::h*100.0;
+}
+
+/**
+ * Returns the value of z_eq
+ * @author David W. Pearson
+ * 
+ * @date 29 March 2019
+ */
+double dascool::getz_eq() {
+    return dascool::z_eq;
+}
+
+/**
+ * Returns the value of z_d
+ * @author David W. Pearson
+ * 
+ * @date 29 March 2019
+ */
+double dascool::getz_d() {
+    return dascool::z_d;
+}
+
+/**
+ * Returns the value of r_d
+ * @author David W. Pearson
+ * 
+ * @date 29 March 2019
+ */
+double dascool::getr_d() {
+    return dascool::r_d;
+}
+
+/**
+ * Calculate the ratio of the baryon to photon momentum density at a given redshift
+ * @author David W. Pearson
+ * 
+ * @param z Redshift at which to calculate
+ * 
+ * @date 29 March 2019
+ */
+double dascool::R(double z) {
+    double Om_bh2 = dascool::Om_b*dascool::h*dascool::h;
+    double Theta4 = dascool::Theta*dascool::Theta*dascool::Theta*dascool::Theta;
+    return (31.5*Om_bh2)/(Theta4*(z/1000.0));
+}
+
+/**
+ * Calculate the scale of the particle horizon at z_eq
+ * @author David W. Pearson
+ * 
+ * @param z Redshift at which to calculate.
+ * 
+ * @date
+ */
+double dascool::getk_eq() {
+//     return sqrt(2.0*dascool::Omega_M()*dascool::H0()*dascool::H0()*dascool::z_eq());
+    return (0.0746*dascool::Om_M*dascool::h*dascool::h)/        
+                     (dascool::Theta*dascool::Theta);
+}
+
+/**
+ * Calculate the comoving distance to a given redshift
+ * @author David W. Pearson
+ * 
+ * @param z The redshift to compute the distance to.
+ * @param w Point to a GSL integration workspace to remove the overhead of constant allocation and deallocation
+ * 
+ * @date 29 March 2019
+ */
+double dascool::comovingDistance(double z, gsl_integration_workspace *w) {
+    double D, error;
+    intParams p;
+    p.OmM = dascool::Om_M;
+    p.OmL = dascool::Om_L;
+    p.Omb = dascool::Om_b;
+    p.Tcmb = dascool::T_cmb;
+    p.H_0 = 100.0;
+    gsl_function F;
+    F.function = &dascool::rz;
+    F.params = &p;
+    gsl_integration_qags(&F, 0.0, z, 1E-6, 1E-6, 1000000, w, &D, &error);
+    return D;
+}
+
+/**
+ * Calculate the redshift to a give comoving distance
+ * @author David W. Pearson
+ * 
+ * @param r The comoving distance
+ * 
+ * @date 29 March 2019
+ */
+double dascool::redshift(double r) {
+    return gsl_spline_eval(dascool::r2z, r, dascool::acc);
+}
+
+/**
+ * Compute linear no-wiggle power spectrum for the defined cosmology with the Eisenstein & Hu 1998 transfer
+ * function
+ * @author David W. Pearson
+ * 
+ * @param space The kind of spacing to use for frequencies, k (logarithmic is recommended)
+ * @param k_min The minimum frequency
+ * @param k_max The maximum frequency
+ * @param num_k The total number of frequencies to compute the power spectrum at
+ * @param z The redshift to compute the power spectrum at
+ * 
+ * @date 29 March 2019
+ */
+std::vector<std::vector<double>> dascool::noWigglePower(spacing space, double k_min, double k_max, int num_k, double z) {
+    dascool::setFrequencies(space, k_min, k_max, num_k);
+    
+    std::vector<std::vector<double>> Pk_NW(2, std::vector<double>(dascool::k.size()));
+    double pk_norm = dascool::sigma_8/dascool::sigmasqr(8.0);
+    for (int i = 0; i < dascool::k.size(); ++i) {
+        double T = calcNoWiggleTransfer(dascool::k[i]);
+        double GofZ = dascool::Growth(z);
+        Pk_NW[0][i] = dascool::k[i];
+        Pk_NW[1][i] = dascool::calcPkPrim(dascool::k[i])*T*T*GofZ*GofZ*pk_norm;
+    }
+    
+    return Pk_NW;
 }

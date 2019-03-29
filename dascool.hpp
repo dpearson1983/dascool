@@ -48,7 +48,7 @@ enum class spacing{
  */
 class dascool{
     double Om_M, Om_L, Om_b, Om_c, tau, T_cmb, h, n, sigma_8; // User provided quantities
-    double z_d, z_eq, R_d, R_eq, Theta, k_eq; // Quantities calculated during initialization
+    double z_d, z_eq, R_d, R_eq, Theta, k_eq, r_d; // Quantities calculated during initialization
     std::vector<double> k;
     gsl_interp_accel *acc;
     gsl_spline *r2z;
@@ -56,6 +56,8 @@ class dascool{
     double E(double z);
     
     static double E_inv(double z, void *params);
+    
+    static double D_1int(double z, void *params);
     
     static double rd_int(double z, void *params);
     
@@ -68,6 +70,10 @@ class dascool{
     double calcPkPrim(double k_i);
     
     double sigmasqr(double R);
+    
+    double D_1(double z);
+    
+    double Growth(double z);
     
     public:
         // Default values from Table 1 of Planck 2018 Results. VI. cosmological parameters
@@ -97,6 +103,8 @@ class dascool{
         
         double R(double z);
         
+        double getk_eq();
+        
         double H(double z);
         
         double D_A(double z);
@@ -107,7 +115,8 @@ class dascool{
         
         double redshift(double r);
         
-        std::vector<double> noWigglePower(spacing space, double k_min, double k_max, int num_k, double z);
+        std::vector<std::vector<double>> noWigglePower(spacing space, double k_min, double k_max, int num_k, double z);
         
 };
     
+#endif
