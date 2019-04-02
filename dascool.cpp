@@ -7,6 +7,7 @@
  * @date 28 March 2019
  */
 
+#include <iostream>
 #include <vector>
 #include <cmath>
 #include <gsl/gsl_integration.h>
@@ -168,14 +169,14 @@ double dascool::calcNoWiggleTransfer(double k_i) {
     double w_m = dascool::Om_M*dascool::h*dascool::h;
     double w_b = dascool::Om_b*dascool::h*dascool::h;
     double fb = dascool::Om_b/dascool::Om_M;
-    double fc = (dascool::Om_M - dascool::Om_b)/dascool::Om_M;
-    double z_eq = 2.5E4*w_m/(dascool::Theta*dascool::Theta*dascool::Theta*dascool::Theta);
-    double k_eq = 7.46E-2*w_m/(dascool::Theta*dascool::Theta);
-    double b1 = 0.313*pow(w_m, -0.419)*(1.0 + 0.607*pow(w_m, 0.674));
-    double b2 = 0.238*pow(w_m, 0.223);
-    double z_d = 1291.0*pow(w_m, 0.251)*(1.0 + b1*pow(w_b, b2))/(1.0 + 0.659*pow(w_m, 0.828));
-    double R_d = (31.5*w_b/(dascool::Theta*dascool::Theta*dascool::Theta*dascool::Theta))*(1000.0/z_d);
-    double R_eq = (31.5*w_b/(dascool::Theta*dascool::Theta*dascool::Theta*dascool::Theta))*(1000.0/z_eq);
+    double fc = dascool::Om_c/dascool::Om_M;
+    double z_eq = 2.5E4*w_m*std::pow(dascool::Theta, -4);
+    double k_eq = 7.46E-2*w_m*std::pow(dascool::Theta, -2)/dascool::h;
+    double b1 = 0.313*std::pow(w_m, -0.419)*(1.0 + 0.607*std::pow(w_m, 0.674));
+    double b2 = 0.238*std::pow(w_m, 0.223);
+    double z_d = 1291.0*(std::pow(w_m, 0.251)/(1.0 + 0.659*std::pow(w_m, 0.828)))*(1.0 + b1*std::pow(w_b, b2));
+    double R_d = (31.5*w_b*std::pow(dascool::Theta, -4))*(1000.0/z_d);
+    double R_eq = (31.5*w_b*std::pow(dascool::Theta, -4))*(1000.0/z_eq);
     double sh_d = (2.0/(3.0*k_eq))*sqrt(6.0/R_eq)*log((sqrt(1.0 + R_d) + sqrt(R_d + R_eq))/(1.0 + sqrt(R_eq)));
     double alpha_gamma = 1.0 - 0.328*log(431.0*w_m)*fb + 0.38*log(22.3*w_m)*fb*fb;
     
@@ -195,10 +196,17 @@ double sinc(double x) {
         return 1.0;
     }
 }
+
+double T_tilde(double q, double alpha_c, double beta_c) {
+    double C = (14.2/alpha_c) + (386/(1.0 + 69.9*std::pow(q, 1.08)));
+    return std::log(std::exp(1.0) + 1.8*beta_c*q)/(std::log(std::exp(1.0) + 1.8*beta_c*q) + C*q*q);
+}
 /**
  * This function will initialize the wiggle (i.e. BAO features) Transfer function from Eisenstein & Hu 
  * 1998
  * @author David W. Pearson
+ * 
+ * @param k_i Frequency at which to calculate the transfer function
  * 
  * @date 29 March 2019
  */
@@ -206,29 +214,28 @@ double dascool::calcWiggleTransfer(double k_i) {
     double w_m = dascool::Om_M*dascool::h*dascool::h;
     double w_b = dascool::Om_b*dascool::h*dascool::h;
     double fb = dascool::Om_b/dascool::Om_M;
-    double fc = (dascool::Om_M - dascool::Om_b)/dascool::Om_M;
-    double z_eq = 2.5E4*w_m/(dascool::Theta*dascool::Theta*dascool::Theta*dascool::Theta);
-    double k_eq = 7.46E-2*w_m/(dascool::Theta*dascool::Theta);
-    double R_d = (31.5*w_b/(dascool::Theta*dascool::Theta*dascool::Theta*dascool::Theta))*(1000.0/z_d);
-    double R_eq = (31.5*w_b/(dascool::Theta*dascool::Theta*dascool::Theta*dascool::Theta))*(1000.0/z_eq);
+    double fc = dascool::Om_c/dascool::Om_M;
+    double z_eq = 2.5E4*w_m*std::pow(dascool::Theta, -4);
+    double k_eq = 7.46E-2*w_m*std::pow(dascool::Theta, -2)/dascool::h;
+    double b1 = 0.313*std::pow(w_m, -0.419)*(1.0 + 0.607*std::pow(w_m, 0.674));
+    double b2 = 0.238*std::pow(w_m, 0.223);
+    double z_d = 1291.0*std::pow(w_m, 0.251)*(1.0 + b1*std::pow(w_b, b2))/(1.0 + 0.659*std::pow(w_m, 0.828));
+    double R_d = (31.5*w_b*std::pow(dascool::Theta, -4))*(1000.0/z_d);
+    double R_eq = (31.5*w_b*std::pow(dascool::Theta, -4))*(1000.0/z_eq);
     double sh_d = (2.0/(3.0*k_eq))*sqrt(6.0/R_eq)*log((sqrt(1.0 + R_d) + sqrt(R_d + R_eq))/(1.0 + sqrt(R_eq)));
-    double alpha_gamma = 1.0 - 0.328*log(431.0*w_m)*fb + 0.38*log(22.3*w_m)*fb*fb;
-    double k_silk = 1.6*std::pow(w_b, 0.52)*std::pow(w_m, 0.73)*(1.0 + std::pow(10.4*w_m, -0.95));
-    double quadTerm = (0.43*k_i*sh_d)*(0.43*k_i*sh_d)*(0.43*k_i*sh_d)*(0.43*k_i*sh_d);
-    double gamma_eff = dascool::Om_M*dascool::h*(alpha_gamma + (1.0 - alpha_gamma)/(1.0 + quadTerm));
+    double k_silk = 1.6*std::pow(w_b, 0.52)*std::pow(w_m, 0.73)*(1.0 + std::pow(10.4*w_m, -0.95))/dascool::h;
     double a1 = std::pow(46.9*w_m, 0.670)*(1.0 + std::pow(32.1*w_m, -0.532));
     double a2 = std::pow(12.0*w_m, 0.424)*(1.0 + std::pow(45.0*w_m, -0.582));
     double alpha_c = std::pow(a1, -fb)*std::pow(a2, -fb*fb*fb);
-    double b1 = 0.944/(1.0 + std::pow(458.0*w_m, -0.708));
-    double b2 = std::pow(0.395*w_m, -0.0266);
     double beta_c = 1.0/(1.0 + b1*(std::pow(fc, b2) - 1.0));
     double q = k_i/(13.41*k_eq);
+//     double q = k_i*dascool::Theta*dascool::Theta/w_m;
     double L1 = log(exp(1) + 1.8*beta_c*q);
     double L2 = log(exp(1) + 1.8*1.0*q);
     double C2 = 14.2/alpha_c + 386/(1.0 + 69.9*std::pow(q, 1.08));
     double C1 = 14.2/1.0 + 386/(1.0 + 69.9*std::pow(q, 1.08));
-    double T_tilde1 = L1/(L1 + C1*q*q);
-    double T_tilde2 = L1/(L1 + C2*q*q);
+    double T_tilde1 = T_tilde(q, 1.0, beta_c);
+    double T_tilde2 = T_tilde(q, alpha_c, beta_c);
     double f = 1.0/(1.0 + std::pow(k_i*sh_d/5.4, 4));
     double T_c = f*T_tilde1 + (1.0 - f)*T_tilde2;
     double y = (1.0 + z_eq)/(1.0 + z_d);
@@ -236,16 +243,22 @@ double dascool::calcWiggleTransfer(double k_i) {
     double G_EH = y*(-6.0*x + (2.0 + 3.0*y)*log((x + 1.0)/(x - 1.0)));
     double alpha_b = 2.07*k_eq*sh_d*std::pow(1.0 + R_d, -0.75)*G_EH;
     double beta_node = 8.41*std::pow(w_m, 0.435);
-    double tilde_s = sh_d/std::pow(1.0 + (beta_node/(k_i*sh_d))*(beta_node/(k_i*sh_d))*(beta_node/(k_i*sh_d)), 1.0/3.0);
+    double tilde_s = sh_d/std::pow(1.0 + std::pow(beta_node/(k_i*sh_d), 3), 1.0/3.0);
     double beta_b = 0.5 + fb + (3.0 - 2.0*fb)*sqrt((17.2*w_m)*(17.2*w_m) + 1.0);
-    double T_tilde3 = L2/(L2 + C1*q*q);
-    double T_b = (T_tilde3/(1.0 + (k_i*sh_d/5.2)*(k_i*sh_d/5.2)) + (alpha_b/(1.0 + std::pow(beta_b/(k_i*sh_d), 3)))*exp(std::pow(-k_i/k_silk, 1.4)))*sinc(k_i*tilde_s/pi);
+    double T_tilde3 = T_tilde(q, 1.0, 1.0);
+    double T_b1 = T_tilde3/(1.0 + (k_i*sh_d/5.2)*(k_i*sh_d/5.2));
+    double T_b2 = alpha_b/(1.0 + std::pow(beta_b/(k_i*sh_d), 3));
+    double epow = exp(-std::pow((k_i/k_silk), 1.4));
+    double sinck = sinc(k_i*tilde_s);
+    double T_b = (T_b1 + T_b2*epow)*sinck;
     return fb*T_b + fc*T_c;
 }
 
 /**
  * This function will calculate the primordial power spectrum
  * @author David W. Pearson
+ * 
+ * @param k_i Frequency at which to calculate the primordial power spectrum
  * 
  * @date 28 March 2019
  */
