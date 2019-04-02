@@ -48,7 +48,7 @@ enum class spacing{
  */
 class dascool{
     double Om_M, Om_L, Om_b, Om_c, tau, T_cmb, h, n, sigma_8; // User provided quantities
-    double z_d, z_eq, R_d, R_eq, Theta, k_eq, r_d; // Quantities calculated during initialization
+    double z_d, z_eq, R_d, R_eq, Theta, k_eq, k_silk, r_d, w_m, w_b, f_b, f_c; // Quantities calculated during initialization
     std::vector<double> k;
     gsl_interp_accel *acc;
     gsl_spline *r2z;

@@ -166,23 +166,10 @@ void dascool::setFrequencies(spacing space, double k_min, double k_max, int num_
  * @date 28 March 2019
  */
 double dascool::calcNoWiggleTransfer(double k_i) {
-    double w_m = dascool::Om_M*dascool::h*dascool::h;
-    double w_b = dascool::Om_b*dascool::h*dascool::h;
-    double fb = dascool::Om_b/dascool::Om_M;
-    double fc = dascool::Om_c/dascool::Om_M;
-    double z_eq = 2.5E4*w_m*std::pow(dascool::Theta, -4);
-    double k_eq = 7.46E-2*w_m*std::pow(dascool::Theta, -2)/dascool::h;
-    double b1 = 0.313*std::pow(w_m, -0.419)*(1.0 + 0.607*std::pow(w_m, 0.674));
-    double b2 = 0.238*std::pow(w_m, 0.223);
-    double z_d = 1291.0*(std::pow(w_m, 0.251)/(1.0 + 0.659*std::pow(w_m, 0.828)))*(1.0 + b1*std::pow(w_b, b2));
-    double R_d = (31.5*w_b*std::pow(dascool::Theta, -4))*(1000.0/z_d);
-    double R_eq = (31.5*w_b*std::pow(dascool::Theta, -4))*(1000.0/z_eq);
-    double sh_d = (2.0/(3.0*k_eq))*sqrt(6.0/R_eq)*log((sqrt(1.0 + R_d) + sqrt(R_d + R_eq))/(1.0 + sqrt(R_eq)));
-    double alpha_gamma = 1.0 - 0.328*log(431.0*w_m)*fb + 0.38*log(22.3*w_m)*fb*fb;
-    
-    double quadTerm = (0.43*k_i*sh_d)*(0.43*k_i*sh_d)*(0.43*k_i*sh_d)*(0.43*k_i*sh_d);
-    double gamma_eff = dascool::Om_M*dascool::h*(alpha_gamma + (1.0 - alpha_gamma)/(1.0 + quadTerm));
-    double q = k_i*dascool::Theta*dascool::Theta/gamma_eff;
+    double alpha_gamma = 1.0 - 0.328*log(431.0*this->w_m)*this->f_b + 0.38*log(22.3*this->w_m)*this->f_b*this->f_b;
+    double quadTerm = std::pow(0.43*k_i*this->r_d, 4);
+    double gamma_eff = this->Om_M*this->h*(alpha_gamma + (1.0 - alpha_gamma)/(1.0 + quadTerm));
+    double q = k_i*this->Theta*this->Theta/(gamma_eff);
     double L = log(2.0*exp(1.0) + 1.8*q);
     double C = 14.2 + 731.0/(1.0 + 62.5*q);
     return L/(L + C*q*q);
@@ -211,47 +198,28 @@ double T_tilde(double q, double alpha_c, double beta_c) {
  * @date 29 March 2019
  */
 double dascool::calcWiggleTransfer(double k_i) {
-    double w_m = dascool::Om_M*dascool::h*dascool::h;
-    double w_b = dascool::Om_b*dascool::h*dascool::h;
-    double fb = dascool::Om_b/dascool::Om_M;
-    double fc = dascool::Om_c/dascool::Om_M;
-    double z_eq = 2.5E4*w_m*std::pow(dascool::Theta, -4);
-    double k_eq = 7.46E-2*w_m*std::pow(dascool::Theta, -2)/dascool::h;
-    double b1 = 0.313*std::pow(w_m, -0.419)*(1.0 + 0.607*std::pow(w_m, 0.674));
-    double b2 = 0.238*std::pow(w_m, 0.223);
-    double z_d = 1291.0*std::pow(w_m, 0.251)*(1.0 + b1*std::pow(w_b, b2))/(1.0 + 0.659*std::pow(w_m, 0.828));
-    double R_d = (31.5*w_b*std::pow(dascool::Theta, -4))*(1000.0/z_d);
-    double R_eq = (31.5*w_b*std::pow(dascool::Theta, -4))*(1000.0/z_eq);
-    double sh_d = (2.0/(3.0*k_eq))*sqrt(6.0/R_eq)*log((sqrt(1.0 + R_d) + sqrt(R_d + R_eq))/(1.0 + sqrt(R_eq)));
-    double k_silk = 1.6*std::pow(w_b, 0.52)*std::pow(w_m, 0.73)*(1.0 + std::pow(10.4*w_m, -0.95))/dascool::h;
-    double a1 = std::pow(46.9*w_m, 0.670)*(1.0 + std::pow(32.1*w_m, -0.532));
-    double a2 = std::pow(12.0*w_m, 0.424)*(1.0 + std::pow(45.0*w_m, -0.582));
-    double alpha_c = std::pow(a1, -fb)*std::pow(a2, -fb*fb*fb);
-    double beta_c = 1.0/(1.0 + b1*(std::pow(fc, b2) - 1.0));
-    double q = k_i/(13.41*k_eq);
-//     double q = k_i*dascool::Theta*dascool::Theta/w_m;
-    double L1 = log(exp(1) + 1.8*beta_c*q);
-    double L2 = log(exp(1) + 1.8*1.0*q);
-    double C2 = 14.2/alpha_c + 386/(1.0 + 69.9*std::pow(q, 1.08));
-    double C1 = 14.2/1.0 + 386/(1.0 + 69.9*std::pow(q, 1.08));
-    double T_tilde1 = T_tilde(q, 1.0, beta_c);
-    double T_tilde2 = T_tilde(q, alpha_c, beta_c);
-    double f = 1.0/(1.0 + std::pow(k_i*sh_d/5.4, 4));
-    double T_c = f*T_tilde1 + (1.0 - f)*T_tilde2;
-    double y = (1.0 + z_eq)/(1.0 + z_d);
+    double b1 = 0.944/(1.0 + std::pow(458.0*this->w_m, -0.532));
+    double b2 = std::pow(0.395*this->w_m, -0.0266);
+    double a1 = std::pow(46.9*this->w_m, 0.670)*(1.0 + std::pow(32.1*this->w_m, -0.532));
+    double a2 = std::pow(12.0*this->w_m, 0.424)*(1.0 + std::pow(45.0*this->w_m, -0.582));
+    double alpha_c = std::pow(a1, -this->f_b)*std::pow(a2, -std::pow(this->f_b, 3));
+    double beta_c = 1.0/(1.0 + b1*(std::pow(this->f_c, b2) - 1.0));
+    double q = k_i/(13.41*this->k_eq);
+    double f = 1.0/(1.0 + std::pow(k_i*this->r_d/5.4, 4));
+    double T_c = f*T_tilde(q, 1.0, beta_c) + (1.0 - f)*T_tilde(q, alpha_c, beta_c);
+    double y = (1.0 + this->z_eq)/(1.0 + this->z_d);
     double x = sqrt(1.0 + y);
     double G_EH = y*(-6.0*x + (2.0 + 3.0*y)*log((x + 1.0)/(x - 1.0)));
-    double alpha_b = 2.07*k_eq*sh_d*std::pow(1.0 + R_d, -0.75)*G_EH;
-    double beta_node = 8.41*std::pow(w_m, 0.435);
-    double tilde_s = sh_d/std::pow(1.0 + std::pow(beta_node/(k_i*sh_d), 3), 1.0/3.0);
-    double beta_b = 0.5 + fb + (3.0 - 2.0*fb)*sqrt((17.2*w_m)*(17.2*w_m) + 1.0);
-    double T_tilde3 = T_tilde(q, 1.0, 1.0);
-    double T_b1 = T_tilde3/(1.0 + (k_i*sh_d/5.2)*(k_i*sh_d/5.2));
-    double T_b2 = alpha_b/(1.0 + std::pow(beta_b/(k_i*sh_d), 3));
-    double epow = exp(-std::pow((k_i/k_silk), 1.4));
+    double alpha_b = 2.07*this->k_eq*this->r_d*std::pow(1.0 + this->R_d, -0.75)*G_EH;
+    double beta_node = 8.41*std::pow(this->w_m, 0.435);
+    double tilde_s = this->r_d/std::pow(1.0 + std::pow(beta_node/(k_i*this->r_d), 3), 1.0/3.0);
+    double beta_b = 0.5 + this->f_b + (3.0 - 2.0*this->f_b)*sqrt((17.2*this->w_m)*(17.2*this->w_m) + 1.0);
+    double T_b1 = T_tilde(q, 1.0, 1.0)/(1.0 + (k_i*this->r_d/5.2)*(k_i*this->r_d/5.2));
+    double T_b2 = alpha_b/(1.0 + std::pow(beta_b/(k_i*this->r_d), 3));
+    double epow = exp(-std::pow((k_i/this->k_silk), 1.4));
     double sinck = sinc(k_i*tilde_s);
     double T_b = (T_b1 + T_b2*epow)*sinck;
-    return fb*T_b + fc*T_c;
+    return this->f_b*T_b + this->f_c*T_c;
 }
 
 /**
@@ -275,7 +243,7 @@ double dascool::calcPkPrim(double k_i) {
  * @date 28 March 2019
  */
 double dascool::sigmasqr(double R) {
-    // Integrate using 32 Gaussian quadrature, which is probably overkill
+    // Integrate using 32 point Gaussian quadrature, which is probably overkill
     double k_min = dascool::k[0];
     double k_max = dascool::k[dascool::k.size() - 1];
     double result = 0.0;
@@ -312,10 +280,16 @@ double dascool::D_1(double z) {
     gsl_function F;
     F.function = &D_1int;
     F.params = &p;
-    gsl_integration_qags(&F, z, 1E6, 1E-6, 1E-6, 10000000, w, &intRes, &error);
+    gsl_integration_qags(&F, z, 1E12, 1E-6, 1E-6, 10000000, w, &intRes, &error);
     gsl_integration_workspace_free(w);
     return dascool::E(z)*intRes;
 }
+// double dascool::D_1(double z) {
+//     double zcube = std::pow(1.0 + z, 3);
+//     double Omega_Mz = this->Om_M*zcube/(this->Om_L + zcube*this->Om_M);
+//     double Omega_Lz = this->Om_L/(this->Om_L + zcube*this->Om_M);
+//     return (5.0*Omega_Mz/(2.0*(1.0 + z)))/(std::pow(Omega_Mz, 4.0/7.0) - Omega_Lz + (1.0 + Omega_Mz/2.0)*(1.0 + Omega_Lz/70.0));
+// }
 
 /**
  * Calculate the normalized linear growth factor at a given redshift
@@ -348,29 +322,43 @@ double dascool::Growth(double z) {
  */
 dascool::dascool(double H_0, double OmegaM, double OmegaL, double Omegab, double Omegac, double Tau,
                  double TCMB, double ns, double sigma8) {
-    dascool::Om_M = OmegaM;
-    dascool::Om_L = OmegaL;
-    dascool::Om_b = Omegab;
-    dascool::Om_c = Omegac;
-    dascool::tau = Tau;
-    dascool::T_cmb = TCMB;
-    dascool::n = ns;
-    dascool::sigma_8 = sigma8;
+    this->Om_M = OmegaM;
+    this->Om_L = OmegaL;
+    this->Om_b = Omegab;
+    this->Om_c = Omegac;
+    this->tau = Tau;
+    this->T_cmb = TCMB;
+    this->n = ns;
+    this->sigma_8 = sigma8;
     
-    dascool::h = H_0/100.0;
-    dascool::Theta = TCMB/2.7;
+    this->h = H_0/100.0;
+    this->Theta = TCMB/2.7;
     
-    dascool::acc = gsl_interp_accel_alloc();
-    dascool::r2z = gsl_spline_alloc(gsl_interp_cspline, 1001);
+    this->w_m = this->Om_M*this->h*this->h;
+    this->w_b = this->Om_b*this->h*this->h;
+    this->f_b = this->Om_b/this->Om_M;
+    this->f_c = (this->Om_M - this->Om_b)/this->Om_M;
+    this->z_eq = 2.5E4*w_m*std::pow(this->Theta, -4);
+    this->k_eq = 7.46E-2*w_m*std::pow(this->Theta, -2)/this->h;
+    double b_1 = 0.313*std::pow(this->w_m, -0.419)*(1.0 + 0.607*std::pow(this->w_m, 0.674));
+    double b_2 = 0.238*std::pow(this->w_m, 0.223);
+    this->z_d = 1291.0*std::pow(this->w_m, 0.251)*(1.0 + b_1*std::pow(this->w_b, b_2))/(1.0 + 0.659*std::pow(this->w_m, 0.828));
+    this->R_d = (31.5*this->w_b*std::pow(this->Theta, -4))*(1000.0/z_d);
+    this->R_eq = (31.5*this->w_b*std::pow(this->Theta, -4))*(1000.0/z_eq);
+    this->r_d = (2.0/(3.0*this->k_eq))*sqrt(6.0/this->R_eq)*log((sqrt(1.0 + this->R_d) + sqrt(this->R_d + this->R_eq))/(1.0 + sqrt(this->R_eq)));
+    this->k_silk = 1.6*std::pow(this->w_b, 0.52)*std::pow(this->w_m, 0.73)*(1.0 + std::pow(10.4*this->w_m, -0.95))/this->h;
+    
+    this->acc = gsl_interp_accel_alloc();
+    this->r2z = gsl_spline_alloc(gsl_interp_cspline, 1001);
     std::vector<double> z;
     std::vector<double> r;
     double dz = 10.0/1000.0;
     gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000000);
     for (int i = 0; i <= 1000; ++i) {
         z.push_back(i*dz);
-        r.push_back(dascool::comovingDistance(i*dz, w));
+        r.push_back(this->comovingDistance(i*dz, w));
     }
-    gsl_spline_init(dascool::r2z, r.data(), z.data(), z.size());
+    gsl_spline_init(this->r2z, r.data(), z.data(), z.size());
     gsl_integration_workspace_free(w);
 }
 
